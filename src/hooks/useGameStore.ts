@@ -23,14 +23,6 @@ function getDefaultStats(): PlayerStats {
   };
 }
 
-interface GameState {
-  coins: number;
-  crystals: number; // <--- ДОБАВИТЬ
-  // ... остальные поля
-  convertCoinsToCrystals: (amount: number) => void; // <--- ДОБАВИТЬ функцию
-  // ...
-}
-
 function getDefaultProfile(): PlayerProfile {
   return {
     name: 'Игрок',
@@ -38,6 +30,7 @@ function getDefaultProfile(): PlayerProfile {
     level: 1,
     xp: 0,
     coins: 0,
+    crystals: 0, // <--- ДОБАВЛЕНО: Начальное количество кристаллов
     joinDate: new Date().toISOString(),
   };
 }
@@ -46,7 +39,9 @@ function loadJSON<T>(key: string, defaultVal: T): T {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return defaultVal;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Мержим с дефолтом, чтобы новые поля (crystals) появлялись у старых пользователей
+    return { ...defaultVal, ...parsed };
   } catch {
     return defaultVal;
   }
@@ -241,6 +236,33 @@ export function useGameStore() {
     }));
   }, []);
 
+  // <--- НОВАЯ ФУНКЦИЯ КОНВЕРТАЦИИ
+  const convertCoinsToCrystals = useCallback((coinsAmount: number) => {
+    const RATE = 1000;
+    
+    // Валидация
+    if (coinsAmount <= 0) return;
+    if (coinsAmount % RATE !== 0) {
+      console.warn("Сумма должна быть кратна 1000");
+      return;
+    }
+
+    setProfile(prev => {
+      if (prev.coins < coinsAmount) {
+        console.warn("Недостаточно монет");
+        return prev;
+      }
+
+      const crystalsToAdd = coinsAmount / RATE;
+      
+      return {
+        ...prev,
+        coins: prev.coins - coinsAmount,
+        crystals: (prev.crystals || 0) + crystalsToAdd,
+      };
+    });
+  }, []);
+
   const updateProfile = useCallback((updates: Partial<PlayerProfile>) => {
     setProfile(prev => ({ ...prev, ...updates }));
   }, []);
@@ -273,6 +295,7 @@ export function useGameStore() {
     questTimeLeft,
     recordMatch,
     claimQuest,
+    convertCoinsToCrystals, // <--- ЭКСПОРТ ФУНКЦИИ
     updateProfile,
     resetAll,
   };
