@@ -23,6 +23,14 @@ function getDefaultStats(): PlayerStats {
   };
 }
 
+interface GameState {
+  coins: number;
+  crystals: number; // <--- ДОБАВИТЬ
+  // ... остальные поля
+  convertCoinsToCrystals: (amount: number) => void; // <--- ДОБАВИТЬ функцию
+  // ...
+}
+
 function getDefaultProfile(): PlayerProfile {
   return {
     name: 'Игрок',
